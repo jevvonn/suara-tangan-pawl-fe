@@ -18,6 +18,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        /* Suara Tangan amber pill with the brown "pressed" shadow */
+        brand:
+          "rounded-full bg-primary font-bold text-primary-foreground drop-shadow-[0_4px_0_var(--color-primary-foreground)] hover:bg-primary/90 active:not-aria-[haspopup]:translate-y-0.5 active:not-aria-[haspopup]:drop-shadow-[0_2px_0_var(--color-primary-foreground)]",
       },
       size: {
         default:
@@ -31,6 +34,7 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        pill: "h-10 gap-2 rounded-full border-0 px-5 text-[15px] tracking-[0.15px]",
       },
     },
     defaultVariants: {
