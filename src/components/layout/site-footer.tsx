@@ -10,7 +10,7 @@ const moduleLinks = [
   { label: 'Kamus Abjad & Angka', to: '/kamus' },
   { label: 'Penerjemah Kalimat Harian', to: '/' },
   { label: 'Video Artikulasi Ekspresif', to: '/edukasi' },
-  { label: 'Uji Pemahaman Bahasa Isyarat', to: '/kuis' },
+  { label: 'Kalimat Favorit', to: '/favorit' },
 ]
 
 const communityLinks = [

@@ -4,7 +4,7 @@ import { PageSpinner } from '@/components/page-spinner'
 import { getHomePath, useSession } from '@/hooks/use-session'
 import type { User } from '@/lib/api/types'
 
-/** Location state the guards pass to /login, so admins return to the page they asked for. */
+/** Location state passed to /login, so people return to the page they asked for. */
 type LoginState = { from?: string }
 
 /**
@@ -24,15 +24,37 @@ export function RequireAdmin() {
   return <Outlet />
 }
 
+/**
+ * Any logged-in user (admin or user). Logged-out visitors go to /login and
+ * come back here afterwards.
+ */
+export function RequireAuth() {
+  const { user, isLoading } = useSession()
+  const location = useLocation()
+
+  if (isLoading) return <PageSpinner />
+  if (!user) {
+    const state: LoginState = { from: location.pathname + location.search + location.hash }
+    return <Navigate to="/login" replace state={state} />
+  }
+  return <Outlet />
+}
+
+const isAdminPath = (path: string) => /^\/admin(?:[/?#]|$)/.test(path)
+
 function getRedirectPath(user: User, state: unknown) {
   const from = (state as LoginState | null)?.from
-  if (user.role === 'admin' && from && /^\/admin(?:[/?#]|$)/.test(from)) return from
+  // Only same-site paths ("/x", not "//evil.example"), and /admin only for admins.
+  if (from && from.startsWith('/') && !from.startsWith('//')) {
+    if (!isAdminPath(from) || user.role === 'admin') return from
+  }
   return getHomePath(user.role)
 }
 
 /**
- * For /login and /register: logged-in users are sent where their role belongs.
- * This also performs the redirect right after a successful login or register.
+ * For /login and /register: logged-in users go back to the page they came from
+ * (e.g. /favorit), otherwise where their role belongs. This also performs the
+ * redirect right after a successful login or register.
  */
 export function GuestOnly() {
   const { user, isLoading } = useSession()

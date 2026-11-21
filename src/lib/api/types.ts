@@ -13,6 +13,16 @@ export type LetterInput = {
   image?: File
 }
 
+/** A sentence the logged-in user saved from the landing page translator. */
+export type FavoriteSentence = {
+  id: string
+  sentence: string
+  /** Letters found for this sentence; symbols without one are shown as empty cards. */
+  letters: Letter[]
+  createdAt: string
+  updatedAt: string
+}
+
 export type UserRole = 'admin' | 'user'
 
 export type User = {

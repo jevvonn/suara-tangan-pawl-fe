@@ -47,6 +47,15 @@ export async function listLetters(): Promise<Letter[]> {
   return letters.map(toLetter)
 }
 
+/**
+ * GET /letters/translate (public): the letters found for a sentence's symbols.
+ * Only matches come back; build the cards with `toSignCards` from `@/lib/sign-cards`.
+ */
+export async function translateSentence(sentence: string, signal?: AbortSignal): Promise<Letter[]> {
+  const letters = await api.get<ApiLetter[]>('/letters/translate', { query: { sentence }, signal })
+  return letters.map(toLetter)
+}
+
 /** POST /letters (admin). The API trims and uppercases the symbol. */
 export async function createLetter(input: LetterInput): Promise<Letter> {
   return toLetter(await api.post<ApiLetter>('/letters', toFormData(input)))

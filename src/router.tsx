@@ -1,11 +1,12 @@
 import { Navigate, createBrowserRouter } from 'react-router'
 
-import { GuestOnly, RequireAdmin } from '@/components/auth/route-guards'
+import { GuestOnly, RequireAdmin, RequireAuth } from '@/components/auth/route-guards'
 import { RootLayout } from '@/components/layout/root-layout'
 import { PageSpinner } from '@/components/page-spinner'
 import { LoginPage } from '@/pages/auth/login-page'
 import { RegisterPage } from '@/pages/auth/register-page'
 import { ComingSoonPage } from '@/pages/coming-soon-page'
+import { FavoritesPage } from '@/pages/favorites/favorites-page'
 import { LandingPage } from '@/pages/landing/landing-page'
 
 export const router = createBrowserRouter([
@@ -16,7 +17,11 @@ export const router = createBrowserRouter([
       { index: true, element: <LandingPage /> },
       { path: 'kamus', element: <ComingSoonPage title="Kamus Abjad" /> },
       { path: 'edukasi', element: <ComingSoonPage title="Edukasi" /> },
-      { path: 'kuis', element: <ComingSoonPage title="Kuis" /> },
+      {
+        // Logged-in users only; logged-out visitors go to /login and come back here.
+        element: <RequireAuth />,
+        children: [{ path: 'favorit', element: <FavoritesPage /> }],
+      },
       {
         // Logged-in users are redirected by role (admin → /admin, user → /).
         element: <GuestOnly />,

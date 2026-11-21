@@ -11,7 +11,18 @@ import {
   listEducationNews,
   updateEducationNews,
 } from '@/lib/api/education-news'
-import { createLetter, deleteLetter, listLetters, updateLetter } from '@/lib/api/letters'
+import {
+  deleteFavoriteSentence,
+  listFavoriteSentences,
+  saveFavoriteSentence,
+} from '@/lib/api/favorites'
+import {
+  createLetter,
+  deleteLetter,
+  listLetters,
+  translateSentence,
+  updateLetter,
+} from '@/lib/api/letters'
 import { getDashboardStats } from '@/lib/api/stats'
 import type { EducationNewsInput, LetterInput, UserRoleInput } from '@/lib/api/types'
 import { deleteUser, listUsers, updateUserRole } from '@/lib/api/users'
@@ -23,6 +34,8 @@ export const queryKeys = {
   letters: ['letters'],
   users: ['users'],
   educationNews: ['education-news'],
+  translate: ['translate'],
+  favorites: ['favorite-sentences'],
 } as const satisfies Record<string, QueryKey>
 
 /** A mutation that refreshes its own list and the dashboard stats on success. */
@@ -54,6 +67,22 @@ export const useUpdateLetter = () =>
     queryKeys.letters,
   )
 export const useDeleteLetter = () => useInvalidatingMutation(deleteLetter, queryKeys.letters)
+
+// Landing page translator: the letters for a sentence (cached per sentence, ignoring case).
+export const useTranslation = (sentence: string) =>
+  useQuery({
+    queryKey: [...queryKeys.translate, sentence.toUpperCase()],
+    queryFn: ({ signal }) => translateSentence(sentence, signal),
+    enabled: sentence.trim() !== '',
+  })
+
+// Favorite sentences (logged-in users). Pass `enabled: false` when logged out.
+export const useFavoriteSentences = (enabled = true) =>
+  useQuery({ queryKey: queryKeys.favorites, queryFn: listFavoriteSentences, enabled })
+export const useSaveFavoriteSentence = () =>
+  useInvalidatingMutation(saveFavoriteSentence, queryKeys.favorites)
+export const useDeleteFavoriteSentence = () =>
+  useInvalidatingMutation(deleteFavoriteSentence, queryKeys.favorites)
 
 // Users
 export const useUsers = () => useQuery({ queryKey: queryKeys.users, queryFn: listUsers })
