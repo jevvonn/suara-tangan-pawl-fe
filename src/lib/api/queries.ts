@@ -13,8 +13,8 @@ import {
 } from '@/lib/api/education-news'
 import { createLetter, deleteLetter, listLetters, updateLetter } from '@/lib/api/letters'
 import { getDashboardStats } from '@/lib/api/stats'
-import type { EducationNewsInput, LetterInput, UserInput } from '@/lib/api/types'
-import { createUser, deleteUser, listUsers, updateUser } from '@/lib/api/users'
+import type { EducationNewsInput, LetterInput, UserRoleInput } from '@/lib/api/types'
+import { deleteUser, listUsers, updateUserRole } from '@/lib/api/users'
 
 export const queryKeys = {
   stats: ['dashboard-stats'],
@@ -55,10 +55,9 @@ export const useDeleteLetter = () => useInvalidatingMutation(deleteLetter, query
 
 // Users
 export const useUsers = () => useQuery({ queryKey: queryKeys.users, queryFn: listUsers })
-export const useCreateUser = () => useInvalidatingMutation(createUser, queryKeys.users)
-export const useUpdateUser = () =>
+export const useUpdateUserRole = () =>
   useInvalidatingMutation(
-    ({ id, input }: { id: string; input: UserInput }) => updateUser(id, input),
+    ({ id, input }: { id: string; input: UserRoleInput }) => updateUserRole(id, input),
     queryKeys.users,
   )
 export const useDeleteUser = () => useInvalidatingMutation(deleteUser, queryKeys.users)

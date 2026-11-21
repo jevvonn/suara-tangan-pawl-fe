@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { Trash2, UserCog, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,7 @@ import { EmptyState } from '@/pages/admin/components/empty-state'
 import { FilterChips } from '@/pages/admin/components/filter-chips'
 import { PageHeader } from '@/pages/admin/components/page-header'
 import { SearchInput } from '@/pages/admin/components/search-input'
-import { UserFormDialog } from '@/pages/admin/users/user-form-dialog'
+import { UserRoleDialog } from '@/pages/admin/users/user-role-dialog'
 
 const ROLE_LABEL: Record<UserRole, string> = { admin: 'Admin', user: 'User' }
 
@@ -43,8 +43,8 @@ export function UsersPage() {
 
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<RoleFilter>('all')
-  const [formOpen, setFormOpen] = useState(false)
-  const [formKey, setFormKey] = useState(0)
+  const [roleOpen, setRoleOpen] = useState(false)
+  const [roleKey, setRoleKey] = useState(0)
   const [editing, setEditing] = useState<User | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState<User | null>(null)
@@ -58,10 +58,10 @@ export function UsersPage() {
     )
   }, [users, search, role])
 
-  function openForm(user: User | null) {
+  function openRoleDialog(user: User) {
     setEditing(user)
-    setFormKey((k) => k + 1)
-    setFormOpen(true)
+    setRoleKey((k) => k + 1)
+    setRoleOpen(true)
   }
 
   async function confirmDelete() {
@@ -79,13 +79,7 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Users"
-        description="Kelola pengguna dan hak akses admin."
-        actions={
-          <Button variant="brand" size="pill" onClick={() => openForm(null)}>
-            <Plus aria-hidden />
-            Tambah User
-          </Button>
-        }
+        description="Kelola pengguna dan hak akses admin. Pengguna baru mendaftar sendiri."
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -107,7 +101,9 @@ export function UsersPage() {
           icon={Users}
           title={users.length === 0 ? 'Belum ada user' : 'Tidak ditemukan'}
           description={
-            users.length === 0 ? 'Tambahkan pengguna pertama.' : 'Coba kata kunci atau filter lain.'
+            users.length === 0
+              ? 'Pengguna akan muncul di sini setelah mendaftar.'
+              : 'Coba kata kunci atau filter lain.'
           }
         />
       ) : (
@@ -158,11 +154,12 @@ export function UsersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openForm(user)}
-                            aria-label={`Edit ${user.name}`}
+                            onClick={() => openRoleDialog(user)}
+                            aria-label={`Ubah role ${user.name}`}
+                            title="Ubah role"
                             className="rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                           >
-                            <Pencil aria-hidden />
+                            <UserCog aria-hidden />
                           </Button>
                           <Button
                             variant="ghost"
@@ -185,7 +182,7 @@ export function UsersPage() {
         </div>
       )}
 
-      <UserFormDialog key={formKey} open={formOpen} onOpenChange={setFormOpen} user={editing} />
+      <UserRoleDialog key={roleKey} open={roleOpen} onOpenChange={setRoleOpen} user={editing} />
 
       <ConfirmDeleteDialog
         open={deleteOpen}

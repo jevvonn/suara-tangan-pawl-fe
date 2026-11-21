@@ -24,9 +24,8 @@ export type User = {
   updatedAt: string
 }
 
-export type UserInput = {
-  name: string
-  email: string
+/** Admins can only change a user's role; users sign up themselves. */
+export type UserRoleInput = {
   role: UserRole
 }
 
