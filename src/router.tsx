@@ -6,7 +6,10 @@ import { PageSpinner } from '@/components/page-spinner'
 import { LoginPage } from '@/pages/auth/login-page'
 import { RegisterPage } from '@/pages/auth/register-page'
 import { ComingSoonPage } from '@/pages/coming-soon-page'
+import { EducationNewsDetailPage } from '@/pages/education/education-news-detail-page'
+import { EducationNewsPage } from '@/pages/education/education-news-page'
 import { FavoritesPage } from '@/pages/favorites/favorites-page'
+import { KamusPage } from '@/pages/kamus/kamus-page'
 import { LandingPage } from '@/pages/landing/landing-page'
 
 export const router = createBrowserRouter([
@@ -15,8 +18,9 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <LandingPage /> },
-      { path: 'kamus', element: <ComingSoonPage title="Kamus Abjad" /> },
-      { path: 'edukasi', element: <ComingSoonPage title="Edukasi" /> },
+      { path: 'kamus', element: <KamusPage /> },
+      { path: 'edukasi', element: <EducationNewsPage /> },
+      { path: 'edukasi/:id', element: <EducationNewsDetailPage /> },
       {
         // Logged-in users only; logged-out visitors go to /login and come back here.
         element: <RequireAuth />,

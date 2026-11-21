@@ -9,7 +9,7 @@ import volunteerIcon from '@/assets/landing/icon-volunteer.svg'
 const moduleLinks = [
   { label: 'Kamus Abjad & Angka', to: '/kamus' },
   { label: 'Penerjemah Kalimat Harian', to: '/' },
-  { label: 'Video Artikulasi Ekspresif', to: '/edukasi' },
+  { label: 'Berita & Materi Edukasi', to: '/edukasi' },
   { label: 'Kalimat Favorit', to: '/favorit' },
 ]
 

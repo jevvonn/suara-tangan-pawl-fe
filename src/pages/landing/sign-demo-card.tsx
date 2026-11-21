@@ -138,6 +138,7 @@ export function SignDemoCard() {
                   <SignCardItem
                     key={`${card.symbol}-${index}`}
                     card={card}
+                    index={index}
                     mirrored={mirrored}
                     onOpen={() => setPreviewIndex(index)}
                     className="animate-in fade-in zoom-in-95 motion-reduce:animate-none"

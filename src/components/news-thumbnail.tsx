@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Hand } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -8,19 +9,27 @@ type NewsThumbnailProps = {
   className?: string
   /** Smaller default artwork (icon only) for small slots like list rows. */
   compact?: boolean
+  /** `lazy` for images further down a list; leave out for the main image of a page. */
+  loading?: 'lazy' | 'eager'
 }
 
 /**
- * Education news thumbnail. When the news has no thumbnail URL it shows the
- * default Suara Tangan artwork, so it can be reused on the public site too.
+ * Education news thumbnail. When the news has no thumbnail URL, or the image
+ * fails to load (deleted file, server down), it shows the default Suara Tangan
+ * artwork instead, so it can be reused on the public site too.
  */
-export function NewsThumbnail({ src, alt = '', className, compact }: NewsThumbnailProps) {
-  if (src) {
+export function NewsThumbnail({ src, alt = '', className, compact, loading }: NewsThumbnailProps) {
+  // Remembers which URL failed, so a new `src` gets a fresh attempt.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+
+  if (src && src !== failedSrc) {
     return (
       <img
         src={src}
         alt={alt}
+        loading={loading}
         decoding="async"
+        onError={() => setFailedSrc(src)}
         className={cn('size-full bg-muted object-cover', className)}
       />
     )

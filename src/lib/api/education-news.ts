@@ -46,6 +46,12 @@ export async function listEducationNews(): Promise<EducationNews[]> {
   return list.map(toEducationNews)
 }
 
+/** GET /education-news/:id. A missing news item throws an ApiError with status 404. */
+export async function getEducationNews(id: string): Promise<EducationNews> {
+  const news = await api.get<ApiEducationNews>(newsPath(id))
+  return toEducationNews(news)
+}
+
 /** POST /education-news (multipart: title, content, thumbnail?) */
 export async function createEducationNews(input: EducationNewsInput): Promise<EducationNews> {
   const news = await api.post<ApiEducationNews>('/education-news', toFormData(input))

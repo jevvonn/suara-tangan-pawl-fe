@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEvent } from 'react'
+import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react'
 import { ChevronLeft, ChevronRight, Expand } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,12 @@ const sizeStyles: Record<
 
 type SignCardItemProps = {
   card: SignCard
+  /**
+   * The card's position in the `SignPreviewDialog` it opens. When the dialog closes,
+   * focus returns to the card at the last position shown (looked up inside the nearest
+   * `[data-sign-scope]` element, or else the card's own list).
+   */
+  index?: number
   mirrored?: boolean
   size?: SignCardSize
   onOpen: () => void
@@ -45,6 +51,7 @@ type SignCardItemProps = {
 /** One card: the hand-sign photo (click to enlarge), or a dashed empty card when there's none yet. */
 export function SignCardItem({
   card,
+  index,
   mirrored = false,
   size = 'lg',
   onOpen,
@@ -53,7 +60,7 @@ export function SignCardItem({
 }: SignCardItemProps) {
   const styles = sizeStyles[size]
   return (
-    <li style={style} className={cn(styles.item, className)}>
+    <li style={style} data-sign-index={index} className={cn(styles.item, className)}>
       {card.image ? (
         <button
           type="button"
@@ -135,6 +142,9 @@ function SymbolBadge({ symbol, className }: { symbol: string; className?: string
   )
 }
 
+const navButtonClassName =
+  'h-9 shrink-0 rounded-full border-0 px-4 font-bold aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-secondary'
+
 type SignPreviewDialogProps = {
   cards: SignCard[]
   /** The card being shown, or null when closed. */
@@ -154,6 +164,15 @@ export function SignPreviewDialog({
   const hasPrev = index !== null && index > 0
   const hasNext = index !== null && index < cards.length - 1
 
+  const contentRef = useRef<HTMLDivElement>(null)
+  /** What had focus when the dialog opened (usually the clicked card). */
+  const openerRef = useRef<HTMLElement | null>(null)
+  /** The last card shown; after ←/→ that may not be the one that was clicked. */
+  const lastIndexRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (index !== null) lastIndexRef.current = index
+  }, [index])
+
   function go(delta: number) {
     if (index === null) return
     const next = index + delta
@@ -165,9 +184,37 @@ export function SignPreviewDialog({
     if (event.key === 'ArrowRight') go(1)
   }
 
+  /** The dialog has no trigger button, so focus goes back to the last card shown. */
+  function returnFocus() {
+    const opener = openerRef.current
+    const last = lastIndexRef.current
+    const scope = opener?.closest('[data-sign-scope]') ?? opener?.closest('ul')
+    const lastCard =
+      last === null ? null : scope?.querySelector<HTMLElement>(`[data-sign-index="${last}"] button`)
+    ;(lastCard ?? opener)?.focus()
+    openerRef.current = null
+    lastIndexRef.current = null
+  }
+
   return (
     <Dialog open={card !== undefined} onOpenChange={(open) => !open && onIndexChange(null)}>
-      <DialogContent onKeyDown={handleKeyDown} className="gap-4 rounded-[32px] bg-card p-4 sm:max-w-md">
+      <DialogContent
+        ref={contentRef}
+        onKeyDown={handleKeyDown}
+        // Focus the dialog itself, not a button that can become unusable at the first or
+        // last card, so ←/→ always work and screen readers start at the title.
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          openerRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null
+          contentRef.current?.focus()
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault()
+          returnFocus()
+        }}
+        className="gap-4 rounded-[32px] bg-card p-4 sm:max-w-md"
+      >
         {card && index !== null && (
           <>
             <div className="flex items-center gap-3 pr-8">
@@ -198,18 +245,20 @@ export function SignPreviewDialog({
             </div>
 
             {cards.length > 1 && (
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                {/* aria-disabled (not disabled) keeps a focused button focused at the ends. */}
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={!hasPrev}
+                  aria-disabled={!hasPrev}
                   onClick={() => go(-1)}
-                  className="h-9 rounded-full border-0 px-4 font-bold"
+                  className={navButtonClassName}
                 >
                   <ChevronLeft aria-hidden />
-                  Sebelumnya
+                  <span className="max-[359px]:sr-only">Sebelumnya</span>
                 </Button>
-                <div className="flex items-center gap-1" aria-hidden>
+                {/* Position dots only from sm: on phones they'd push the row past the edge. */}
+                <div className="hidden min-w-0 items-center gap-1 sm:flex" aria-hidden>
                   {cards.length <= 12 &&
                     cards.map((c, i) => (
                       <span
@@ -224,11 +273,11 @@ export function SignPreviewDialog({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={!hasNext}
+                  aria-disabled={!hasNext}
                   onClick={() => go(1)}
-                  className="h-9 rounded-full border-0 px-4 font-bold"
+                  className={navButtonClassName}
                 >
-                  Berikutnya
+                  <span className="max-[359px]:sr-only">Berikutnya</span>
                   <ChevronRight aria-hidden />
                 </Button>
               </div>

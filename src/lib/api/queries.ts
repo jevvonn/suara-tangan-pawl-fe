@@ -8,6 +8,7 @@ import {
 import {
   createEducationNews,
   deleteEducationNews,
+  getEducationNews,
   listEducationNews,
   updateEducationNews,
 } from '@/lib/api/education-news'
@@ -24,7 +25,12 @@ import {
   updateLetter,
 } from '@/lib/api/letters'
 import { getDashboardStats } from '@/lib/api/stats'
-import type { EducationNewsInput, LetterInput, UserRoleInput } from '@/lib/api/types'
+import type {
+  EducationNews,
+  EducationNewsInput,
+  LetterInput,
+  UserRoleInput,
+} from '@/lib/api/types'
 import { deleteUser, listUsers, updateUserRole } from '@/lib/api/users'
 
 export const queryKeys = {
@@ -96,6 +102,21 @@ export const useDeleteUser = () => useInvalidatingMutation(deleteUser, queryKeys
 // Education news
 export const useEducationNews = () =>
   useQuery({ queryKey: queryKeys.educationNews, queryFn: listEducationNews })
+/**
+ * One news item (public detail page). Its key starts with `queryKeys.educationNews`, so
+ * admin changes refresh it too. While it loads, the item from the cached list is shown.
+ */
+export const useEducationNewsItem = (id: string) => {
+  const queryClient = useQueryClient()
+  return useQuery({
+    queryKey: [...queryKeys.educationNews, id],
+    queryFn: () => getEducationNews(id),
+    placeholderData: () =>
+      queryClient
+        .getQueryData<EducationNews[]>(queryKeys.educationNews)
+        ?.find((news) => news.id === id),
+  })
+}
 export const useCreateEducationNews = () =>
   useInvalidatingMutation(createEducationNews, queryKeys.educationNews)
 export const useUpdateEducationNews = () =>

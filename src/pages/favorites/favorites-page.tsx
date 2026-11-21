@@ -146,6 +146,7 @@ function FavoriteItem({ favorite }: { favorite: FavoriteSentence }) {
             <SignCardItem
               key={`${card.symbol}-${index}`}
               card={card}
+              index={index}
               size="sm"
               onOpen={() => setPreviewIndex(index)}
             />
