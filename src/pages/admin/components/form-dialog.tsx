@@ -49,7 +49,9 @@ export function FormDialog({
           className,
         )}
       >
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col">
+        {/* min-w-0: DialogContent is a grid, so without it long unbroken text (e.g. a URL)
+            widens the form and the whole dialog scrolls sideways. */}
+        <form onSubmit={handleSubmit} noValidate className="flex min-w-0 flex-col">
           <DialogHeader className="gap-1 px-6 pt-6 pr-12">
             <DialogTitle className="font-heading text-xl font-extrabold text-foreground">
               {title}

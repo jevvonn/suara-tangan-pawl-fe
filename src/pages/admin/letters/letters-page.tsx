@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getErrorMessage } from '@/lib/api/errors'
+import { ApiError } from '@/lib/api/errors'
 import { getLetterCategory, type LetterCategory } from '@/lib/api/letters'
 import { useDeleteLetter, useLetters } from '@/lib/api/queries'
 import type { Letter } from '@/lib/api/types'
@@ -14,6 +14,7 @@ import { EmptyState } from '@/pages/admin/components/empty-state'
 import { FilterChips } from '@/pages/admin/components/filter-chips'
 import { PageHeader } from '@/pages/admin/components/page-header'
 import { SearchInput } from '@/pages/admin/components/search-input'
+import { getLetterErrorMessage } from '@/pages/admin/letters/letter-errors'
 import { LetterFormDialog } from '@/pages/admin/letters/letter-form-dialog'
 
 const CATEGORY_LABEL: Record<LetterCategory, string> = {
@@ -32,7 +33,7 @@ const FILTER_OPTIONS: { value: CategoryFilter; label: string }[] = [
 ]
 
 export function LettersPage() {
-  const { data: letters, isPending, isError, error } = useLetters()
+  const { data: letters, isPending, isError, error, refetch } = useLetters()
   const deleteLetter = useDeleteLetter()
 
   const [search, setSearch] = useState('')
@@ -71,7 +72,12 @@ export function LettersPage() {
       toast.success(`"${deleting.symbol}" berhasil dihapus.`)
       setDeleteOpen(false)
     } catch (err) {
-      toast.error(getErrorMessage(err))
+      toast.error(getLetterErrorMessage(err))
+      if (err instanceof ApiError && err.status === 404) {
+        // Already deleted elsewhere: close and show the current list.
+        setDeleteOpen(false)
+        void refetch()
+      }
     }
   }
 
@@ -105,7 +111,7 @@ export function LettersPage() {
 
       {isError ? (
         <p role="alert" className="rounded-[32px] bg-card p-6 text-sm text-destructive">
-          Gagal memuat data: {getErrorMessage(error)}
+          Gagal memuat data: {getLetterErrorMessage(error)}
         </p>
       ) : isPending ? (
         <LetterGrid>

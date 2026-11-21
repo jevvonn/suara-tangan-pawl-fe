@@ -17,6 +17,8 @@ import type { EducationNewsInput, LetterInput, UserRoleInput } from '@/lib/api/t
 import { deleteUser, listUsers, updateUserRole } from '@/lib/api/users'
 
 export const queryKeys = {
+  /** The logged-in user; see `useSession` in `@/hooks/use-session`. */
+  session: ['session'],
   stats: ['dashboard-stats'],
   letters: ['letters'],
   users: ['users'],

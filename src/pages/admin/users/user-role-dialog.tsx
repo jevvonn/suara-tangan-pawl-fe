@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import {
@@ -9,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ApiError, getErrorMessage } from '@/lib/api/errors'
-import { useUpdateUserRole } from '@/lib/api/queries'
+import { queryKeys, useUpdateUserRole } from '@/lib/api/queries'
 import type { User, UserRole } from '@/lib/api/types'
 import { getInitials } from '@/lib/format'
 import { FormDialog } from '@/pages/admin/components/form-dialog'
@@ -29,6 +30,7 @@ type UserRoleDialogProps = {
  * and new users sign up themselves.
  */
 export function UserRoleDialog({ open, onOpenChange, user }: UserRoleDialogProps) {
+  const queryClient = useQueryClient()
   const updateUserRole = useUpdateUserRole()
   const [role, setRole] = useState<UserRole>(user?.role ?? 'user')
   const [error, setError] = useState<string>()
@@ -49,8 +51,13 @@ export function UserRoleDialog({ open, onOpenChange, user }: UserRoleDialogProps
     } catch (err) {
       if (err instanceof ApiError && err.field === 'role') {
         setError(err.message)
-      } else {
-        toast.error(getErrorMessage(err))
+        return
+      }
+      toast.error(getErrorMessage(err))
+      // Deleted elsewhere in the meantime: close and drop the stale row.
+      if (err instanceof ApiError && err.status === 404) {
+        onOpenChange(false)
+        void queryClient.invalidateQueries({ queryKey: queryKeys.users })
       }
     }
   }

@@ -1,13 +1,14 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { login } from '@/lib/api/auth'
-import { getErrorMessage } from '@/lib/api/errors'
+import { useLogin } from '@/hooks/use-session'
+import { setApiFieldErrors } from '@/lib/api/errors'
+import { getAuthErrorMessage, translateAuthFieldError } from '@/pages/auth/auth-errors'
 import { errorProps, loginSchema, type LoginValues } from '@/pages/auth/auth-schemas'
 import {
   AuthCard,
@@ -16,8 +17,11 @@ import {
   authInputClassName,
 } from '@/pages/auth/auth-ui'
 
+/** API field name → form field. */
+const API_FIELDS = { email: 'email', password: 'password' } as const
+
 export function LoginPage() {
-  const navigate = useNavigate()
+  const login = useLogin()
   const {
     register,
     handleSubmit,
@@ -30,11 +34,13 @@ export function LoginPage() {
 
   async function onSubmit(values: LoginValues) {
     try {
-      const { user } = await login(values)
+      const { user } = await login.mutateAsync(values)
       toast.success(`Selamat datang, ${user.name}!`)
-      navigate(user.role === 'admin' ? '/admin' : '/', { replace: true })
+      // No navigate() here: <GuestOnly> redirects by role as soon as the session has a user.
     } catch (error) {
-      setError('root', { message: getErrorMessage(error) })
+      if (!setApiFieldErrors(error, setError, API_FIELDS, translateAuthFieldError)) {
+        setError('root', { message: getAuthErrorMessage(error) })
+      }
     }
   }
 

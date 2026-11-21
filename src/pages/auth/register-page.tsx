@@ -1,13 +1,14 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { register as registerAccount } from '@/lib/api/auth'
-import { ApiError, getErrorMessage } from '@/lib/api/errors'
+import { useRegister } from '@/hooks/use-session'
+import { setApiFieldErrors } from '@/lib/api/errors'
+import { getAuthErrorMessage, translateAuthFieldError } from '@/pages/auth/auth-errors'
 import { errorProps, registerSchema, type RegisterValues } from '@/pages/auth/auth-schemas'
 import {
   AuthCard,
@@ -16,10 +17,16 @@ import {
   authInputClassName,
 } from '@/pages/auth/auth-ui'
 
-const FIELDS = ['name', 'email', 'password', 'passwordConfirmation'] as const
+/** API field name → form field. */
+const API_FIELDS = {
+  name: 'name',
+  email: 'email',
+  password: 'password',
+  password_confirmation: 'passwordConfirmation',
+} as const
 
 export function RegisterPage() {
-  const navigate = useNavigate()
+  const registerAccount = useRegister()
   const {
     register,
     handleSubmit,
@@ -32,15 +39,12 @@ export function RegisterPage() {
 
   async function onSubmit(values: RegisterValues) {
     try {
-      await registerAccount(values)
-      toast.success('Akun berhasil dibuat. Silakan masuk.')
-      navigate('/login', { replace: true })
+      const { user } = await registerAccount.mutateAsync(values)
+      toast.success(`Akun berhasil dibuat. Selamat datang, ${user.name}!`)
+      // No navigate() here: <GuestOnly> sends the new (always `user`) account to /.
     } catch (error) {
-      const field = error instanceof ApiError ? error.field : undefined
-      if (field && (FIELDS as readonly string[]).includes(field)) {
-        setError(field as (typeof FIELDS)[number], { message: getErrorMessage(error) })
-      } else {
-        setError('root', { message: getErrorMessage(error) })
+      if (!setApiFieldErrors(error, setError, API_FIELDS, translateAuthFieldError)) {
+        setError('root', { message: getAuthErrorMessage(error) })
       }
     }
   }

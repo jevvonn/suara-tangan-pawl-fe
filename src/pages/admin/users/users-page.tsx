@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Trash2, UserCog, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -12,7 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { getErrorMessage } from '@/lib/api/errors'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useSession } from '@/hooks/use-session'
+import { ApiError, getErrorMessage } from '@/lib/api/errors'
 import { useDeleteUser, useUsers } from '@/lib/api/queries'
 import type { User, UserRole } from '@/lib/api/types'
 import { formatDate, getInitials } from '@/lib/format'
@@ -38,8 +40,10 @@ const headClassName =
   'h-11 px-4 text-[11px] font-bold tracking-[0.44px] text-muted-foreground uppercase'
 
 export function UsersPage() {
-  const { data: users, isPending, isError, error } = useUsers()
+  const { data: users, isPending, isError, error, refetch } = useUsers()
   const deleteUser = useDeleteUser()
+  // The API refuses to change or delete your own account, so those actions are locked.
+  const { user: currentUser } = useSession()
 
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<RoleFilter>('all')
@@ -54,7 +58,7 @@ export function UsersPage() {
     return (users ?? []).filter(
       (u) =>
         (role === 'all' || u.role === role) &&
-        (u.name.toLowerCase().includes(query) || u.email.includes(query)),
+        (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)),
     )
   }, [users, search, role])
 
@@ -72,6 +76,11 @@ export function UsersPage() {
       setDeleteOpen(false)
     } catch (err) {
       toast.error(getErrorMessage(err))
+      // Already deleted elsewhere: drop the stale row instead of offering a retry.
+      if (err instanceof ApiError && err.status === 404) {
+        setDeleteOpen(false)
+        void refetch()
+      }
     }
   }
 
@@ -127,56 +136,82 @@ export function UsersPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                : filtered.map((user) => (
-                    <TableRow key={user.id} className="border-border hover:bg-muted/50">
-                      <TableCell className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span
-                            aria-hidden
-                            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tint-amber text-xs font-bold text-primary-foreground"
-                          >
-                            {getInitials(user.name)}
-                          </span>
-                          <span className="font-bold text-foreground">{user.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">
-                        {user.email}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <RoleBadge role={user.role} />
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">
-                        {formatDate(user.createdAt)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openRoleDialog(user)}
-                            aria-label={`Ubah role ${user.name}`}
-                            title="Ubah role"
-                            className="rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-                          >
-                            <UserCog aria-hidden />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setDeleting(user)
-                              setDeleteOpen(true)
-                            }}
-                            aria-label={`Hapus ${user.name}`}
-                            className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 aria-hidden />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                : filtered.map((user) => {
+                    const isSelf = user.id === currentUser?.id
+                    return (
+                      <TableRow key={user.id} className="border-border hover:bg-muted/50">
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <span
+                              aria-hidden
+                              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tint-amber text-xs font-bold text-primary-foreground"
+                            >
+                              {getInitials(user.name)}
+                            </span>
+                            <span className="font-bold text-foreground">{user.name}</span>
+                            {isSelf && (
+                              <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-[11px] leading-4 font-bold tracking-[0.44px] text-muted-foreground">
+                                Kamu
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {user.email}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <RoleBadge role={user.role} />
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {formatDate(user.createdAt)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex justify-end">
+                            {isSelf ? (
+                              <LockedAction
+                                label={`Ubah role ${user.name}`}
+                                reason="Tidak dapat mengubah role akun sendiri"
+                              >
+                                <UserCog aria-hidden />
+                              </LockedAction>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openRoleDialog(user)}
+                                aria-label={`Ubah role ${user.name}`}
+                                title="Ubah role"
+                                className="rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                              >
+                                <UserCog aria-hidden />
+                              </Button>
+                            )}
+                            {isSelf ? (
+                              <LockedAction
+                                label={`Hapus ${user.name}`}
+                                reason="Tidak dapat menghapus akun sendiri"
+                              >
+                                <Trash2 aria-hidden />
+                              </LockedAction>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setDeleting(user)
+                                  setDeleteOpen(true)
+                                }}
+                                aria-label={`Hapus ${user.name}`}
+                                className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                <Trash2 aria-hidden />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
             </TableBody>
           </Table>
         </div>
@@ -193,6 +228,37 @@ export function UsersPage() {
         onConfirm={confirmDelete}
       />
     </>
+  )
+}
+
+/**
+ * A row action the logged-in admin can't use on their own account. It stays
+ * focusable (aria-disabled, not disabled) so the tooltip explains why.
+ */
+function LockedAction({
+  label,
+  reason,
+  children,
+}: {
+  label: string
+  reason: string
+  children: ReactNode
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-disabled
+          aria-label={`${label}: ${reason.toLowerCase()}`}
+          className="cursor-not-allowed rounded-full text-muted-foreground opacity-50 hover:bg-transparent hover:text-muted-foreground"
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
   )
 }
 

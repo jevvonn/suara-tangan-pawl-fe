@@ -1,7 +1,8 @@
 import { Navigate, createBrowserRouter } from 'react-router'
-import { Loader2 } from 'lucide-react'
 
+import { GuestOnly, RequireAdmin } from '@/components/auth/route-guards'
 import { RootLayout } from '@/components/layout/root-layout'
+import { PageSpinner } from '@/components/page-spinner'
 import { LoginPage } from '@/pages/auth/login-page'
 import { RegisterPage } from '@/pages/auth/register-page'
 import { ComingSoonPage } from '@/pages/coming-soon-page'
@@ -16,8 +17,14 @@ export const router = createBrowserRouter([
       { path: 'kamus', element: <ComingSoonPage title="Kamus Abjad" /> },
       { path: 'edukasi', element: <ComingSoonPage title="Edukasi" /> },
       { path: 'kuis', element: <ComingSoonPage title="Kuis" /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'register', element: <RegisterPage /> },
+      {
+        // Logged-in users are redirected by role (admin → /admin, user → /).
+        element: <GuestOnly />,
+        children: [
+          { path: 'login', element: <LoginPage /> },
+          { path: 'register', element: <RegisterPage /> },
+        ],
+      },
       {
         path: '*',
         element: (
@@ -30,46 +37,49 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    // Admin panel: lazy-loaded so public visitors never download it.
-    // TODO(auth): protect these routes once the API has authentication.
+    // Admins only: logged-out visitors go to /login, users go to /.
     path: '/admin',
-    hydrateFallbackElement: (
-      <div className="flex min-h-svh items-center justify-center bg-background">
-        <Loader2 aria-label="Memuat" className="size-6 animate-spin text-primary" />
-      </div>
-    ),
-    lazy: () =>
-      import('@/pages/admin/admin-layout').then((m) => ({ Component: m.AdminLayout })),
+    element: <RequireAdmin />,
+    hydrateFallbackElement: <PageSpinner fullScreen />,
     children: [
       {
-        index: true,
-        handle: { title: 'Dashboard' },
+        // Lazy-loaded so visitors of the public pages never download the admin panel.
         lazy: () =>
-          import('@/pages/admin/dashboard-page').then((m) => ({ Component: m.DashboardPage })),
+          import('@/pages/admin/admin-layout').then((m) => ({ Component: m.AdminLayout })),
+        children: [
+          {
+            index: true,
+            handle: { title: 'Dashboard' },
+            lazy: () =>
+              import('@/pages/admin/dashboard-page').then((m) => ({
+                Component: m.DashboardPage,
+              })),
+          },
+          {
+            path: 'letters',
+            handle: { title: 'Letters' },
+            lazy: () =>
+              import('@/pages/admin/letters/letters-page').then((m) => ({
+                Component: m.LettersPage,
+              })),
+          },
+          {
+            path: 'users',
+            handle: { title: 'Users' },
+            lazy: () =>
+              import('@/pages/admin/users/users-page').then((m) => ({ Component: m.UsersPage })),
+          },
+          {
+            path: 'education-news',
+            handle: { title: 'Education News' },
+            lazy: () =>
+              import('@/pages/admin/education-news/news-page').then((m) => ({
+                Component: m.EducationNewsPage,
+              })),
+          },
+          { path: '*', element: <Navigate to="/admin" replace /> },
+        ],
       },
-      {
-        path: 'letters',
-        handle: { title: 'Letters' },
-        lazy: () =>
-          import('@/pages/admin/letters/letters-page').then((m) => ({
-            Component: m.LettersPage,
-          })),
-      },
-      {
-        path: 'users',
-        handle: { title: 'Users' },
-        lazy: () =>
-          import('@/pages/admin/users/users-page').then((m) => ({ Component: m.UsersPage })),
-      },
-      {
-        path: 'education-news',
-        handle: { title: 'Education News' },
-        lazy: () =>
-          import('@/pages/admin/education-news/news-page').then((m) => ({
-            Component: m.EducationNewsPage,
-          })),
-      },
-      { path: '*', element: <Navigate to="/admin" replace /> },
     ],
   },
 ])

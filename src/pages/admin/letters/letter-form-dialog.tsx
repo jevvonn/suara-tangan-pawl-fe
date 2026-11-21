@@ -1,13 +1,19 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { Input } from '@/components/ui/input'
-import { ApiError, getErrorMessage } from '@/lib/api/errors'
-import { useCreateLetter, useUpdateLetter } from '@/lib/api/queries'
+import { ApiError } from '@/lib/api/errors'
+import { queryKeys, useCreateLetter, useUpdateLetter } from '@/lib/api/queries'
 import type { Letter } from '@/lib/api/types'
 import { FormDialog } from '@/pages/admin/components/form-dialog'
 import { FormField, adminInputClassName } from '@/pages/admin/components/form-field'
 import { ImagePicker } from '@/pages/admin/components/image-picker'
+import {
+  getLetterErrorMessage,
+  getLetterFieldErrors,
+  type LetterFieldErrors,
+} from '@/pages/admin/letters/letter-errors'
 
 const MAX_SYMBOL_LENGTH = 3
 
@@ -18,10 +24,11 @@ type LetterFormDialogProps = {
   letter: Letter | null
 }
 
-type Errors = { symbol?: string; image?: string }
+type Errors = LetterFieldErrors
 
 export function LetterFormDialog({ open, onOpenChange, letter }: LetterFormDialogProps) {
   const isEdit = letter !== null
+  const queryClient = useQueryClient()
   const createLetter = useCreateLetter()
   const updateLetter = useUpdateLetter()
   const pending = createLetter.isPending || updateLetter.isPending
@@ -48,18 +55,24 @@ export function LetterFormDialog({ open, onOpenChange, letter }: LetterFormDialo
     const input = { symbol, image: image ?? undefined }
     try {
       if (isEdit) {
-        await updateLetter.mutateAsync({ id: letter.id, input })
-        toast.success(`"${symbol.trim().toUpperCase()}" berhasil diperbarui.`)
+        const saved = await updateLetter.mutateAsync({ id: letter.id, input })
+        toast.success(`"${saved.symbol}" berhasil diperbarui.`)
       } else {
-        await createLetter.mutateAsync(input)
-        toast.success(`"${symbol.trim().toUpperCase()}" berhasil ditambahkan.`)
+        const saved = await createLetter.mutateAsync(input)
+        toast.success(`"${saved.symbol}" berhasil ditambahkan.`)
       }
       onOpenChange(false)
     } catch (error) {
-      if (error instanceof ApiError && error.field) {
-        setErrors({ [error.field]: error.message })
-      } else {
-        toast.error(getErrorMessage(error))
+      const fieldErrors = getLetterFieldErrors(error, symbol)
+      if (fieldErrors.symbol || fieldErrors.image) {
+        setErrors(fieldErrors)
+        return
+      }
+      toast.error(getLetterErrorMessage(error))
+      if (error instanceof ApiError && error.status === 404) {
+        // Someone else already deleted it: close and show the current list.
+        onOpenChange(false)
+        void queryClient.invalidateQueries({ queryKey: queryKeys.letters })
       }
     }
   }
@@ -85,7 +98,10 @@ export function LetterFormDialog({ open, onOpenChange, letter }: LetterFormDialo
           maxLength={MAX_SYMBOL_LENGTH}
           autoComplete="off"
           autoFocus
-          onChange={(event) => setSymbol(event.target.value)}
+          onChange={(event) => {
+            setSymbol(event.target.value)
+            setErrors((e) => ({ ...e, symbol: undefined }))
+          }}
           aria-invalid={Boolean(errors.symbol) || undefined}
           aria-describedby={errors.symbol ? 'letter-symbol-error' : 'letter-symbol-hint'}
           className={`${adminInputClassName} font-display text-lg font-bold uppercase md:text-lg`}

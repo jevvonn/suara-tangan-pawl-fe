@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Newspaper, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { NewsThumbnail } from '@/components/news-thumbnail'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getErrorMessage } from '@/lib/api/errors'
-import { useDeleteEducationNews, useEducationNews } from '@/lib/api/queries'
+import { ApiError } from '@/lib/api/errors'
+import { queryKeys, useDeleteEducationNews, useEducationNews } from '@/lib/api/queries'
 import type { EducationNews } from '@/lib/api/types'
 import { formatDate } from '@/lib/format'
 import { ConfirmDeleteDialog } from '@/pages/admin/components/confirm-delete-dialog'
@@ -14,8 +15,10 @@ import { EmptyState } from '@/pages/admin/components/empty-state'
 import { PageHeader } from '@/pages/admin/components/page-header'
 import { SearchInput } from '@/pages/admin/components/search-input'
 import { NewsFormDialog } from '@/pages/admin/education-news/news-form-dialog'
+import { getNewsErrorMessage } from '@/pages/admin/education-news/news-errors'
 
 export function EducationNewsPage() {
+  const queryClient = useQueryClient()
   const { data: newsList, isPending, isError, error } = useEducationNews()
   const deleteNews = useDeleteEducationNews()
 
@@ -46,7 +49,12 @@ export function EducationNewsPage() {
       toast.success('Berita berhasil dihapus.')
       setDeleteOpen(false)
     } catch (err) {
-      toast.error(getErrorMessage(err))
+      toast.error(getNewsErrorMessage(err, 'Gagal menghapus berita. Coba lagi.'))
+      if (err instanceof ApiError && err.status === 404) {
+        // Already deleted (e.g. by another admin): drop it from the list.
+        setDeleteOpen(false)
+        void queryClient.invalidateQueries({ queryKey: queryKeys.educationNews })
+      }
     }
   }
 
@@ -72,7 +80,7 @@ export function EducationNewsPage() {
 
       {isError ? (
         <p role="alert" className="rounded-[32px] bg-card p-6 text-sm text-destructive">
-          Gagal memuat data: {getErrorMessage(error)}
+          Gagal memuat data: {getNewsErrorMessage(error)}
         </p>
       ) : isPending ? (
         <NewsGrid>

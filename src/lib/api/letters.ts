@@ -1,84 +1,63 @@
-import { ApiError } from '@/lib/api/errors'
-import { createId, db, delay, now, releaseFile, uploadFile } from '@/lib/api/mock-db'
+import { api } from '@/lib/api/client'
 import type { Letter, LetterInput } from '@/lib/api/types'
-
-// TODO(api): replace each function body with a call to the backend, e.g.
-//   GET    /letters
-//   POST   /letters        (multipart: symbol, image)
-//   PUT    /letters/:id    (multipart: symbol, image?)
-//   DELETE /letters/:id
 
 export type LetterCategory = 'letter' | 'number' | 'symbol'
 
+/** Same rule as the API's `category` column. */
 export function getLetterCategory(symbol: string): LetterCategory {
   if (/^[A-Z]+$/i.test(symbol)) return 'letter'
   if (/^[0-9]+$/.test(symbol)) return 'number'
   return 'symbol'
 }
 
-const CATEGORY_ORDER: Record<LetterCategory, number> = { letter: 0, number: 1, symbol: 2 }
-
-export function compareLetters(a: Letter, b: Letter) {
-  const byCategory =
-    CATEGORY_ORDER[getLetterCategory(a.symbol)] - CATEGORY_ORDER[getLetterCategory(b.symbol)]
-  return byCategory || a.symbol.localeCompare(b.symbol, 'id', { numeric: true })
+/** A letter as the API sends it (snake_case, numeric id). */
+export type ApiLetter = {
+  id: number
+  symbol: string
+  category: LetterCategory
+  /** Full URL, e.g. http://127.0.0.1:8000/storage/letters/abc.webp */
+  image_url: string
+  created_by: number | null
+  created_at: string
+  updated_at: string
 }
 
-function normalizeSymbol(symbol: string) {
-  return symbol.trim().toUpperCase()
-}
-
-function assertUniqueSymbol(symbol: string, ignoreId?: string) {
-  const taken = db.letters.some((l) => l.symbol === symbol && l.id !== ignoreId)
-  if (taken) {
-    throw new ApiError(`"${symbol}" sudah ada.`, { status: 409, field: 'symbol' })
+/** The one place an API letter becomes the camelCase `Letter` the UI works with. */
+export function toLetter(raw: ApiLetter): Letter {
+  return {
+    id: String(raw.id),
+    symbol: raw.symbol,
+    imageUrl: raw.image_url,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
   }
 }
 
+/** Multipart body; leaving out `image` on update keeps the current image. */
+function toFormData(input: LetterInput) {
+  const form = new FormData()
+  form.append('symbol', input.symbol)
+  if (input.image) form.append('image', input.image)
+  return form
+}
+
+/** GET /letters, already sorted: letters, then numbers, then symbols ("2" before "10"). */
 export async function listLetters(): Promise<Letter[]> {
-  await delay()
-  return structuredClone(db.letters).sort(compareLetters)
+  const letters = await api.get<ApiLetter[]>('/letters')
+  return letters.map(toLetter)
 }
 
+/** POST /letters (admin). The API trims and uppercases the symbol. */
 export async function createLetter(input: LetterInput): Promise<Letter> {
-  await delay()
-  const symbol = normalizeSymbol(input.symbol)
-  assertUniqueSymbol(symbol)
-  if (!input.image) throw new ApiError('Gambar wajib diunggah.', { field: 'image' })
-
-  const timestamp = now()
-  const letter: Letter = {
-    id: createId('ltr'),
-    symbol,
-    imageUrl: uploadFile(input.image),
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  }
-  db.letters.push(letter)
-  return structuredClone(letter)
+  return toLetter(await api.post<ApiLetter>('/letters', toFormData(input)))
 }
 
+/** PUT /letters/:id (admin). */
 export async function updateLetter(id: string, input: LetterInput): Promise<Letter> {
-  await delay()
-  const letter = db.letters.find((l) => l.id === id)
-  if (!letter) throw new ApiError('Data tidak ditemukan.', { status: 404 })
-
-  const symbol = normalizeSymbol(input.symbol)
-  assertUniqueSymbol(symbol, id)
-
-  letter.symbol = symbol
-  if (input.image) {
-    releaseFile(letter.imageUrl)
-    letter.imageUrl = uploadFile(input.image)
-  }
-  letter.updatedAt = now()
-  return structuredClone(letter)
+  return toLetter(await api.put<ApiLetter>(`/letters/${id}`, toFormData(input)))
 }
 
+/** DELETE /letters/:id (admin). Also deletes the image on the server. */
 export async function deleteLetter(id: string): Promise<void> {
-  await delay()
-  const index = db.letters.findIndex((l) => l.id === id)
-  if (index === -1) throw new ApiError('Data tidak ditemukan.', { status: 404 })
-  releaseFile(db.letters[index].imageUrl)
-  db.letters.splice(index, 1)
+  await api.delete(`/letters/${id}`)
 }

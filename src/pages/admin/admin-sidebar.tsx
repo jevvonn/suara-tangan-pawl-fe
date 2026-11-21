@@ -1,5 +1,6 @@
-import { Link, NavLink, matchPath, useLocation } from 'react-router'
-import { ExternalLink } from 'lucide-react'
+import { Link, NavLink, matchPath, useLocation, useNavigate } from 'react-router'
+import { ExternalLink, LogOut } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { BrandMark } from '@/components/layout/brand-mark'
 import {
@@ -16,6 +17,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { useSession } from '@/hooks/use-session'
 import { adminNav } from '@/pages/admin/admin-nav'
 
 const menuButtonClassName =
@@ -23,11 +25,21 @@ const menuButtonClassName =
 
 export function AdminSidebar() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const { isMobile, setOpenMobile } = useSidebar()
+  const { user, logout } = useSession()
 
   // Close the mobile sheet after navigating.
   const handleNavigate = () => {
     if (isMobile) setOpenMobile(false)
+  }
+
+  async function handleLogout() {
+    handleNavigate()
+    // Leave the admin panel first, otherwise its guard would redirect to /login.
+    await navigate('/', { replace: true })
+    await logout()
+    toast.success('Kamu telah keluar.')
   }
 
   return (
@@ -78,7 +90,13 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-3">
-        <SidebarMenu>
+        {user && (
+          <div className="flex min-w-0 flex-col px-4 pb-1 group-data-[collapsible=icon]:hidden">
+            <span className="truncate text-sm font-bold text-foreground">{user.name}</span>
+            <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+          </div>
+        )}
+        <SidebarMenu className="gap-1">
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
@@ -89,6 +107,16 @@ export function AdminSidebar() {
                 <ExternalLink aria-hidden />
                 <span>Lihat situs</span>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Keluar"
+              onClick={handleLogout}
+              className={menuButtonClassName}
+            >
+              <LogOut aria-hidden />
+              <span>Keluar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

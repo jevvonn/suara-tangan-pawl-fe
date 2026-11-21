@@ -1,11 +1,30 @@
-import { ApiError } from '@/lib/api/errors'
-import { createId, db, delay, now } from '@/lib/api/mock-db'
-import type { User } from '@/lib/api/types'
+import { api } from '@/lib/api/client'
+import type { User, UserRole } from '@/lib/api/types'
 
-// TODO(api): replace each function body with a call to the backend, e.g.
-//   POST /api/auth/login     (JSON: { email, password })                       → { user, token }
-//   POST /api/auth/register  (JSON: { name, email, password, password_confirmation }) → { user, token }
-// Then store the token (and send it as `Authorization: Bearer <token>`).
+// Plain API calls. Storing the token and the session lives in `@/hooks/use-session`.
+
+/** A user as the API sends it (snake_case, numeric id). */
+export type ApiUser = {
+  id: number
+  name: string
+  email: string
+  role: UserRole
+  email_verified_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** The one place an API user becomes the camelCase `User` the UI works with. */
+export function toUser(raw: ApiUser): User {
+  return {
+    id: String(raw.id),
+    name: raw.name,
+    email: raw.email,
+    role: raw.role,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+  }
+}
 
 export type LoginInput = {
   email: string
@@ -24,46 +43,48 @@ export type AuthResponse = {
   token: string
 }
 
-/**
- * Dummy passwords keyed by email. The seeded accounts all use "password123",
- * e.g. admin@example.com / password123.
- */
-const passwords = new Map<string, string>(db.users.map((u) => [u.email, 'password123']))
-
-function fakeToken() {
-  return `mock_${crypto.randomUUID()}`
+type ApiAuthPayload = {
+  user: ApiUser
+  token: string
+  token_type: 'Bearer'
 }
 
+function toAuthResponse(payload: ApiAuthPayload): AuthResponse {
+  return { user: toUser(payload.user), token: payload.token }
+}
+
+/** POST /auth/login. Wrong credentials → ApiError with status 401. */
 export async function login(input: LoginInput): Promise<AuthResponse> {
-  await delay(600)
-  const email = input.email.trim().toLowerCase()
-  const user = db.users.find((u) => u.email === email)
-
-  if (!user || passwords.get(email) !== input.password) {
-    // Same message for both cases so the form doesn't reveal which emails exist.
-    throw new ApiError('Email atau kata sandi salah.', { status: 401 })
-  }
-  return { user: structuredClone(user), token: fakeToken() }
+  const payload = await api.post<ApiAuthPayload>(
+    '/auth/login',
+    { email: input.email, password: input.password },
+    { token: null },
+  )
+  return toAuthResponse(payload)
 }
 
+/** POST /auth/register. New accounts always get the `user` role. */
 export async function register(input: RegisterInput): Promise<AuthResponse> {
-  await delay(600)
-  const email = input.email.trim().toLowerCase()
+  const payload = await api.post<ApiAuthPayload>(
+    '/auth/register',
+    {
+      name: input.name,
+      email: input.email,
+      password: input.password,
+      password_confirmation: input.passwordConfirmation,
+    },
+    { token: null },
+  )
+  return toAuthResponse(payload)
+}
 
-  if (db.users.some((u) => u.email === email)) {
-    throw new ApiError('Email sudah terdaftar.', { status: 422, field: 'email' })
-  }
+/** GET /auth/session: the user the stored token belongs to. */
+export async function getSession(signal?: AbortSignal): Promise<User> {
+  const { user } = await api.get<{ user: ApiUser }>('/auth/session', { signal })
+  return toUser(user)
+}
 
-  const timestamp = now()
-  const user: User = {
-    id: createId('usr'),
-    name: input.name.trim(),
-    email,
-    role: 'user',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  }
-  db.users.push(user)
-  passwords.set(email, input.password)
-  return { user: structuredClone(user), token: fakeToken() }
+/** POST /auth/logout: revokes `token` on the server. */
+export async function logout(token: string): Promise<void> {
+  await api.post('/auth/logout', undefined, { token })
 }

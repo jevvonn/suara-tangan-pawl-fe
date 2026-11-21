@@ -1,31 +1,28 @@
-import { getLetterCategory } from '@/lib/api/letters'
-import { db, delay } from '@/lib/api/mock-db'
+import { api } from '@/lib/api/client'
+import { toEducationNews, type ApiEducationNews } from '@/lib/api/education-news'
+import { toLetter, type ApiLetter } from '@/lib/api/letters'
 import type { DashboardStats } from '@/lib/api/types'
 
-// TODO(api): replace with GET /dashboard/stats
-
-const byNewest = (a: { createdAt: string }, b: { createdAt: string }) =>
-  b.createdAt.localeCompare(a.createdAt)
+/** GET /dashboard/stats as the API sends it (snake_case). Admin only. */
+type ApiDashboardStats = {
+  letters: { total: number; letters: number; numbers: number; symbols: number }
+  users: { total: number; admins: number; users: number }
+  education_news: { total: number; with_thumbnail: number }
+  recent_letters: ApiLetter[]
+  recent_education_news: ApiEducationNews[]
+}
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  await delay()
-  const categories = db.letters.map((l) => getLetterCategory(l.symbol))
-  const count = (category: string) => categories.filter((c) => c === category).length
-  const admins = db.users.filter((u) => u.role === 'admin').length
+  const stats = await api.get<ApiDashboardStats>('/dashboard/stats')
 
-  return structuredClone({
-    letters: {
-      total: db.letters.length,
-      letters: count('letter'),
-      numbers: count('number'),
-      symbols: count('symbol'),
-    },
-    users: { total: db.users.length, admins, users: db.users.length - admins },
+  return {
+    letters: stats.letters,
+    users: stats.users,
     educationNews: {
-      total: db.educationNews.length,
-      withThumbnail: db.educationNews.filter((n) => n.thumbnailUrl).length,
+      total: stats.education_news.total,
+      withThumbnail: stats.education_news.with_thumbnail,
     },
-    recentLetters: [...db.letters].sort(byNewest).slice(0, 4),
-    recentEducationNews: [...db.educationNews].sort(byNewest).slice(0, 3),
-  })
+    recentLetters: stats.recent_letters.map(toLetter),
+    recentEducationNews: stats.recent_education_news.map(toEducationNews),
+  }
 }

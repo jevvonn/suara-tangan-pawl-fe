@@ -1,10 +1,64 @@
 import { Link, NavLink } from 'react-router'
+import { LayoutDashboard, LogOut } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { BrandMark } from '@/components/layout/brand-mark'
 import { Button } from '@/components/ui/button'
+import { useSession } from '@/hooks/use-session'
 import { mainNav } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
 import playCircleIcon from '@/assets/landing/icon-play-circle.svg'
+
+const pillClassName =
+  'h-10 rounded-full bg-surface-low px-5 text-[15px] leading-5 font-bold tracking-[0.15px] text-foreground hover:bg-secondary hover:text-foreground'
+
+// Icon-only on phones and next to the desktop nav (lg), where space is tight.
+const iconPillClassName = cn(pillClassName, 'gap-2 px-3.5 sm:px-5 lg:px-3.5 xl:px-5')
+const iconPillLabelClassName = 'hidden sm:inline lg:hidden xl:inline'
+
+/** "Masuk" when logged out; "Dashboard" (admins) and "Keluar" when logged in. */
+function AccountActions() {
+  const { user, isLoading, logout } = useSession()
+
+  // Render nothing while the stored token is checked, so "Masuk" doesn't flash.
+  if (isLoading) return null
+
+  if (!user) {
+    return (
+      <Button asChild variant="ghost" className={pillClassName}>
+        <NavLink to="/login">Masuk</NavLink>
+      </Button>
+    )
+  }
+
+  async function handleLogout() {
+    await logout()
+    toast.success('Kamu telah keluar.')
+  }
+
+  return (
+    <>
+      {user.role === 'admin' && (
+        <Button asChild variant="ghost" className={iconPillClassName}>
+          <Link to="/admin" aria-label="Dashboard admin" title="Dashboard admin">
+            <LayoutDashboard aria-hidden className="size-[18px]" />
+            <span className={iconPillLabelClassName}>Dashboard</span>
+          </Link>
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        onClick={handleLogout}
+        aria-label="Keluar"
+        title={`Keluar dari akun ${user.name}`}
+        className={iconPillClassName}
+      >
+        <LogOut aria-hidden className="size-[18px]" />
+        <span className={iconPillLabelClassName}>Keluar</span>
+      </Button>
+    </>
+  )
+}
 
 export function SiteHeader() {
   return (
@@ -38,20 +92,14 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Button
-            asChild
-            variant="ghost"
-            className="h-10 rounded-full bg-surface-low px-5 text-[15px] leading-5 font-bold tracking-[0.15px] text-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <NavLink to="/login">Masuk</NavLink>
-          </Button>
+          <AccountActions />
           <Button
             asChild
             className="h-auto gap-2 rounded-full border-0 px-3.5 py-2.5 text-[15px] leading-5 font-bold tracking-[0.15px] drop-shadow-[0_4px_0_var(--color-primary-foreground)] hover:bg-primary/90 sm:px-5"
           >
             <Link to="/kamus" aria-label="Mulai Belajar">
               <img src={playCircleIcon} alt="" />
-              {/* Icon-only on phones so the header fits next to "Masuk" */}
+              {/* Icon-only on phones so the header fits next to the account buttons */}
               <span className="hidden sm:inline">Mulai Belajar</span>
             </Link>
           </Button>
