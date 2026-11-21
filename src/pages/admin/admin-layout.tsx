@@ -2,7 +2,6 @@ import { Outlet, ScrollRestoration, useMatches } from 'react-router'
 
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { Toaster } from '@/components/ui/sonner'
 import { AdminSidebar } from '@/pages/admin/admin-sidebar'
 
 export type AdminRouteHandle = { title: string }
@@ -41,7 +40,6 @@ export function AdminLayout() {
           </div>
         </div>
       </SidebarInset>
-      <Toaster position="top-right" />
       <ScrollRestoration />
     </SidebarProvider>
   )

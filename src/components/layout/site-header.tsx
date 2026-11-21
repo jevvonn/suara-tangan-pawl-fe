@@ -37,15 +37,25 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <Button
-          asChild
-          className="h-auto gap-2 rounded-full border-0 px-5 py-2.5 text-[15px] leading-5 font-bold tracking-[0.15px] drop-shadow-[0_4px_0_var(--color-primary-foreground)] hover:bg-primary/90"
-        >
-          <Link to="/kamus">
-            <img src={playCircleIcon} alt="" />
-            Mulai Belajar
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            asChild
+            variant="ghost"
+            className="h-10 rounded-full bg-surface-low px-5 text-[15px] leading-5 font-bold tracking-[0.15px] text-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <NavLink to="/login">Masuk</NavLink>
+          </Button>
+          <Button
+            asChild
+            className="h-auto gap-2 rounded-full border-0 px-3.5 py-2.5 text-[15px] leading-5 font-bold tracking-[0.15px] drop-shadow-[0_4px_0_var(--color-primary-foreground)] hover:bg-primary/90 sm:px-5"
+          >
+            <Link to="/kamus" aria-label="Mulai Belajar">
+              <img src={playCircleIcon} alt="" />
+              {/* Icon-only on phones so the header fits next to "Masuk" */}
+              <span className="hidden sm:inline">Mulai Belajar</span>
+            </Link>
+          </Button>
+        </div>
       </div>
     </header>
   )

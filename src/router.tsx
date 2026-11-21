@@ -2,6 +2,8 @@ import { Navigate, createBrowserRouter } from 'react-router'
 import { Loader2 } from 'lucide-react'
 
 import { RootLayout } from '@/components/layout/root-layout'
+import { LoginPage } from '@/pages/auth/login-page'
+import { RegisterPage } from '@/pages/auth/register-page'
 import { ComingSoonPage } from '@/pages/coming-soon-page'
 import { LandingPage } from '@/pages/landing/landing-page'
 
@@ -14,6 +16,8 @@ export const router = createBrowserRouter([
       { path: 'kamus', element: <ComingSoonPage title="Kamus Abjad" /> },
       { path: 'edukasi', element: <ComingSoonPage title="Edukasi" /> },
       { path: 'kuis', element: <ComingSoonPage title="Kuis" /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'register', element: <RegisterPage /> },
       {
         path: '*',
         element: (
