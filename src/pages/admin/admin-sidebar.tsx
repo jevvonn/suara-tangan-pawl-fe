@@ -51,6 +51,9 @@ export function AdminSidebar() {
           className="flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary group-data-[collapsible=icon]:justify-center"
         >
           <BrandMark textClassName="tracking-[-0.5px] group-data-[collapsible=icon]:hidden" />
+          <span className="hidden size-8 items-center justify-center rounded-lg bg-primary font-heading font-black text-xs text-primary-foreground group-data-[collapsible=icon]:flex">
+            ST
+          </span>
           <span className="rounded-full bg-tint-amber px-2 py-0.5 text-[10px] leading-4 font-bold tracking-[0.4px] text-primary-foreground group-data-[collapsible=icon]:hidden">
             ADMIN
           </span>
